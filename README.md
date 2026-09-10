@@ -37,15 +37,15 @@ Actions) + Supabase (free Postgres database with realtime push updates).
    - **anon / public key** — safe to expose in the browser, protected by the
      read-only policies in `schema.sql`
    - **service_role key** (Project Settings → API → reveal) — **secret**,
-     never put this in the frontend; it's only for the GitHub Actions job.
+     never put this in the index.html; it's only for the GitHub Actions job.
 5. Go to **Database → Replication** and confirm `teams` and `meta` are
    listed under the `supabase_realtime` publication (schema.sql already adds
    them, but it's worth checking — this is what makes updates push live to
    open browser tabs instead of requiring a manual refresh).
 
-### 2. Fill in the frontend
+### 2. Fill in the index.html
 
-Open [`frontend/index.html`](frontend/index.html) and near the bottom of the
+Open [`docs/index.html`](docs/index.html) and near the bottom of the
 `<script>` block, replace:
 
 ```js
@@ -59,7 +59,7 @@ with your actual **Project URL** and **anon key** from step 1.4.
 
 1. Create a new GitHub repo and push this whole folder to it.
 2. Repo → **Settings → Pages** → Source: "Deploy from a branch" → Branch:
-   `main`, folder: `/frontend` (or move `index.html` to the repo root if you'd
+   `main`, folder: `/docs` (or move `index.html` to the repo root if you'd
    rather not use a subfolder — either works, just point Pages at wherever
    `index.html` lives).
 3. GitHub gives you a URL like `https://<you>.github.io/<repo>/` — that's
@@ -97,12 +97,12 @@ stalls on a matchday:
    its end — you'd need to swap in a different free source (or a paid one
    like API-Football) in `fetch_scoreboard()`.
 4. Worst case, you can always update Supabase by hand in the SQL editor —
-   the frontend just reads whatever is in the `teams`/`meta` tables.
+   the index.html just reads whatever is in the `teams`/`meta` tables.
 
 ## Project layout
 
 ```
-frontend/index.html         the dashboard (static, deploy as-is via GitHub Pages)
+docs/index.html         the dashboard (static, deploy as-is via GitHub Pages)
 scripts/refresh.py          the refresh job (fetches scores, recomputes ranks, writes to Supabase)
 scripts/requirements.txt    its Python dependencies
 .github/workflows/refresh.yml   the 5-minute GitHub Actions cron

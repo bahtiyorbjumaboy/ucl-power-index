@@ -294,7 +294,13 @@ function fmtDate(iso){
   if (!iso) return "—";
   try{
     const d = new Date(iso);
-    return d.toLocaleString(undefined,{month:"short", day:"numeric", hour:"numeric", minute:"2-digit", timeZoneName:"short"});
+    return d.toLocaleString(undefined,{
+      month:"short",
+      day:"numeric",
+      hour:"numeric",
+      minute:"2-digit",
+      timeZone:"America/New_York"
+    }) + " EST";
   }catch(e){ return iso; }
 }
 
