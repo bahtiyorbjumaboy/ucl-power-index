@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UCL Power Index</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800;900&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root{
+  color-scheme: light;
+  --bg: #eef1f6;
+  --surface: #ffffff;
+  --surface-2: #f5f7fb;
+  --ink: #0b1220;
+  --ink-2: #4b5568;
+  --ink-muted: #7d879a;
+  --hairline: rgba(11,18,32,0.10);
+  --hairline-strong: rgba(11,18,32,0.18);
+  --accent: #2a56d6;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(42,86,214,0.10);
+  --good: #0ca30c;
+  --good-bg: rgba(12,163,12,0.12);
+  --critical: #d03b3b;
+  --critical-bg: rgba(208,59,59,0.12);
+  --warning: #b9790a;
+  --warning-bg: rgba(250,178,25,0.22);
+  --div-pos: #2a78d6;
+  --div-neg: #e34948;
+  --div-mid: #cfd3da;
+  --seq-2: #6da7ec;
+  --seq-3: #2a78d6;
+  --zone-top8: rgba(12,163,12,0.08);
+  --zone-playoff: rgba(42,86,214,0.06);
+  --zone-out: rgba(125,135,154,0.06);
+  --shadow: 0 1px 2px rgba(11,18,32,0.04), 0 8px 24px rgba(11,18,32,0.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg: #0a0e16; --surface: #121826; --surface-2: #161e2e;
+    --ink: #f1f4fa; --ink-2: #aab3c5; --ink-muted: #7e879a;
+    --hairline: rgba(255,255,255,0.09); --hairline-strong: rgba(255,255,255,0.16);
+    --accent: #6f93ff; --accent-ink: #0a0e16; --accent-soft: rgba(111,147,255,0.14);
+    --good: #35c46a; --good-bg: rgba(53,196,106,0.14);
+    --critical: #f0685f; --critical-bg: rgba(240,104,95,0.14);
+    --warning: #f0b429; --warning-bg: rgba(240,180,41,0.16);
+    --div-pos: #3987e5; --div-neg: #e66767; --div-mid: #383a45;
+    --seq-2: #1c5cab; --seq-3: #3987e5;
+    --zone-top8: rgba(53,196,106,0.09); --zone-playoff: rgba(111,147,255,0.08); --zone-out: rgba(126,135,154,0.06);
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 30px rgba(0,0,0,0.35);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg: #0a0e16; --surface: #121826; --surface-2: #161e2e;
+  --ink: #f1f4fa; --ink-2: #aab3c5; --ink-muted: #7e879a;
+  --hairline: rgba(255,255,255,0.09); --hairline-strong: rgba(255,255,255,0.16);
+  --accent: #6f93ff; --accent-ink: #0a0e16; --accent-soft: rgba(111,147,255,0.14);
+  --good: #35c46a; --good-bg: rgba(53,196,106,0.14);
+  --critical: #f0685f; --critical-bg: rgba(240,104,95,0.14);
+  --warning: #f0b429; --warning-bg: rgba(240,180,41,0.16);
+  --div-pos: #3987e5; --div-neg: #e66767; --div-mid: #383a45;
+  --seq-2: #1c5cab; --seq-3: #3987e5;
+  --zone-top8: rgba(53,196,106,0.09); --zone-playoff: rgba(111,147,255,0.08); --zone-out: rgba(126,135,154,0.06);
+  --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 30px rgba(0,0,0,0.35);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  padding:0 16px; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding-block:24px 64px;}
+.display{font-family:"Big Shoulders Display","IBM Plex Sans",sans-serif; font-stretch:condensed; letter-spacing:0.01em;}
+h1,h2,h3{margin:0;}
+a{color:inherit;}
+.mono, .num{font-variant-numeric: tabular-nums;}
+.header{display:flex; flex-wrap:wrap; gap:18px 28px; align-items:flex-end; justify-content:space-between; padding-bottom:20px; margin-bottom:22px; border-bottom:1px solid var(--hairline);}
+.header-left{display:flex; flex-direction:column; gap:6px; min-width:260px;}
+.eyebrow{font-size:12px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent);}
+.title{font-size:clamp(32px,6vw,52px); font-weight:900; line-height:0.92; color:var(--ink); text-wrap:balance;}
+.subtitle{font-size:14px; color:var(--ink-2); max-width:52ch;}
+.header-right{display:flex; flex-direction:column; align-items:flex-end; gap:8px; font-size:12.5px; color:var(--ink-muted);}
+.live-pill{display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:600; padding:5px 12px 5px 10px; border-radius:999px; background:var(--surface-2); border:1px solid var(--hairline); color:var(--ink-2);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 0 3px var(--good-bg);}
+.live-dot.stale{background:var(--ink-muted); box-shadow:0 0 0 3px var(--hairline);}
+.refresh-note{max-width:34ch; text-align:right;}
+.refresh-note b{color:var(--ink-2); font-weight:600;}
+.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:26px;}
+.tile{background:var(--surface); border:1px solid var(--hairline); border-radius:10px; padding:14px 16px; display:flex; flex-direction:column; gap:6px; box-shadow:var(--shadow);}
+.tile-label{font-size:10.5px; font-weight:600; letter-spacing:0.09em; text-transform:uppercase; color:var(--ink-muted);}
+.tile-value{font-family:"Big Shoulders Display",sans-serif; font-weight:800; font-size:30px; line-height:1; color:var(--ink);}
+.tile-sub{font-size:12px; color:var(--ink-2);}
+.tabs{display:flex; gap:4px; border-bottom:1px solid var(--hairline); margin-bottom:16px;}
+.tab-btn{appearance:none; border:none; background:none; cursor:pointer; font-family:inherit; font-size:14.5px; font-weight:600; color:var(--ink-muted); padding:10px 4px; margin-right:22px; border-bottom:2.5px solid transparent; transition:color .15s ease;}
+.tab-btn:hover{color:var(--ink-2);}
+.tab-btn.active{color:var(--ink); border-bottom-color:var(--accent);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+.filters{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px; background:var(--surface); border:1px solid var(--hairline); border-radius:10px; padding:10px 12px;}
+.filters input[type="text"], .filters select{font-family:inherit; font-size:13px; color:var(--ink); background:var(--surface-2); border:1px solid var(--hairline); border-radius:7px; padding:7px 10px; outline:none;}
+.filters input[type="text"]{min-width:170px;}
+.filters input[type="text"]:focus, .filters select:focus{border-color:var(--accent);}
+.chip-toggle{display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--ink-2); background:var(--surface-2); border:1px solid var(--hairline); border-radius:999px; padding:6px 12px 6px 10px; cursor:pointer; user-select:none;}
+.chip-toggle input{accent-color:var(--accent);}
+.chip-toggle.on{background:var(--warning-bg); border-color:transparent; color:var(--warning);}
+.filter-count{margin-left:auto; font-size:12px; color:var(--ink-muted);}
+.table-scroll{overflow-x:auto; border:1px solid var(--hairline); border-radius:12px; background:var(--surface); box-shadow:var(--shadow);}
+table{border-collapse:collapse; width:100%; min-width:920px; font-size:13px;}
+thead th{position:sticky; top:0; background:var(--surface); text-align:left; font-size:10.5px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:var(--ink-muted); padding:11px 10px; border-bottom:1px solid var(--hairline-strong); white-space:nowrap;}
+thead th.num, td.num{text-align:right;}
+tbody td{padding:9px 10px; border-bottom:1px solid var(--hairline); color:var(--ink); white-space:nowrap;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--surface-2);}
+tbody tr.zone-top8{box-shadow:inset 3px 0 0 var(--good);}
+tbody tr.zone-playoff{box-shadow:inset 3px 0 0 var(--accent);}
+tbody tr.zone-out{box-shadow:inset 3px 0 0 transparent;}
+td.rank-cell{font-family:"Big Shoulders Display",sans-serif; font-weight:800; font-size:16px; color:var(--ink);}
+.team-name{font-weight:600;}
+.team-sub{font-size:11px; color:var(--ink-muted); font-weight:400;}
+.mv{display:inline-flex; align-items:center; gap:4px; font-weight:700; font-size:12.5px;}
+.mv.up{color:var(--good);}
+.mv.down{color:var(--critical);}
+.mv.flat{color:var(--ink-muted);}
+.mv svg{width:10px;height:10px;}
+.flag-badge{display:inline-block; margin-left:6px; font-size:9.5px; font-weight:700; letter-spacing:0.06em; padding:2px 6px; border-radius:5px; background:var(--warning-bg); color:var(--warning); vertical-align:middle;}
+.form-pill{display:inline-flex; align-items:center; justify-content:center; width:19px; height:19px; border-radius:5px; font-size:10.5px; font-weight:700; color:#fff;}
+.form-W{background:var(--good);}
+.form-L{background:var(--critical);}
+.form-D{background:var(--ink-muted);}
+.gap-cell{font-weight:600;}
+.gap-pos{color:var(--div-pos);}
+.gap-neg{color:var(--div-neg);}
+.gap-zero{color:var(--ink-muted); font-weight:400;}
+.probar-track{position:relative; width:64px; height:7px; border-radius:4px; background:var(--surface-2); overflow:hidden; display:inline-block; vertical-align:middle; margin-right:7px;}
+.probar-fill{position:absolute; inset:0 auto 0 0; border-radius:4px; background:linear-gradient(90deg,var(--seq-2),var(--seq-3));}
+.probar-wrap{display:inline-flex; align-items:center; gap:0;}
+.probar-num{font-size:12px; color:var(--ink-2); min-width:34px; display:inline-block; text-align:right;}
+.section-head{margin:6px 0 12px;}
+.section-head h2{font-family:"Big Shoulders Display",sans-serif; font-size:24px; font-weight:800;}
+.section-head p{margin:3px 0 0; font-size:13px; color:var(--ink-2); max-width:70ch;}
+.divchart{border:1px solid var(--hairline); border-radius:12px; background:var(--surface); box-shadow:var(--shadow); padding:18px 18px 8px;}
+.divchart-scale{display:flex; justify-content:space-between; font-size:11px; color:var(--ink-muted); padding:0 4px 8px; border-bottom:1px solid var(--hairline); margin-bottom:6px;}
+.divrow{display:grid; grid-template-columns:150px 1fr 44px; align-items:center; gap:8px; padding:4px 4px; border-bottom:1px solid var(--hairline);}
+.divrow:last-child{border-bottom:none;}
+.divrow .dname{font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.divrow .dname small{display:block; font-weight:400; color:var(--ink-muted); font-size:10.5px;}
+.divtrack{position:relative; height:16px; background:linear-gradient(to right, transparent 49.5%, var(--hairline-strong) 49.5%, var(--hairline-strong) 50.5%, transparent 50.5%);}
+.divbar{position:absolute; top:3px; height:10px; border-radius:3px;}
+.divbar.pos{background:var(--div-pos); left:50%;}
+.divbar.neg{background:var(--div-neg); right:50%;}
+.divval{font-size:12px; font-weight:700; text-align:right;}
+.divval.pos{color:var(--div-pos);}
+.divval.neg{color:var(--div-neg);}
+.divval.zero{color:var(--ink-muted); font-weight:400;}
+.legend-row{display:flex; gap:18px; align-items:center; font-size:11.5px; color:var(--ink-2); margin:10px 4px 14px;}
+.legend-sw{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px;}
+.method{margin-top:34px; padding-top:20px; border-top:1px solid var(--hairline); font-size:12.5px; color:var(--ink-muted); line-height:1.6;}
+.method h3{font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-2); margin-bottom:8px; font-weight:700;}
+.method p{margin:0 0 10px;}
+.empty-state{padding:40px 20px; text-align:center; color:var(--ink-muted); font-size:13px;}
+.config-error{max-width:640px; margin:80px auto; padding:24px; border:1px solid var(--hairline); border-radius:12px; background:var(--surface); text-align:center;}
+@media (max-width:640px){ .divrow{grid-template-columns:100px 1fr 36px;} table{min-width:760px;} }
+</style>
+</head>
+<body>
+
+<div class="wrap" id="app" hidden>
+  <div class="header">
+    <div class="header-left">
+      <div class="eyebrow">Champions League &middot; 2026/27 League Phase</div>
+      <h1 class="title display">POWER INDEX</h1>
+      <div class="subtitle">All 36 clubs, ranked by a composite index blending pre-season expert power rankings, the UEFA club coefficient, and every league-phase result. Flags any club that swings more than 5 places in a single matchday.</div>
+    </div>
+    <div class="header-right">
+      <div class="live-pill"><span class="live-dot" id="liveDot"></span><span id="refreshedLabel">updated —</span></div>
+      <div class="refresh-note">Refreshes automatically as new results come in (checked every few minutes).</div>
+    </div>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="power">Power Index</button>
+    <button class="tab-btn" data-tab="coeff">Power vs. UEFA Coefficient</button>
+    <button class="tab-btn" data-tab="table">League Phase Table</button>
+  </div>
+
+  <div class="tab-panel active" id="panel-power">
+    <div class="filters">
+      <input type="text" id="f-search" placeholder="Search team…">
+      <select id="f-league"><option value="all">All leagues</option></select>
+      <select id="f-pot">
+        <option value="all">All pots</option>
+        <option value="1">Pot 1</option><option value="2">Pot 2</option>
+        <option value="3">Pot 3</option><option value="4">Pot 4</option>
+      </select>
+      <select id="f-outlook">
+        <option value="all">Any knockout outlook</option>
+        <option value="lock">Top-8 track (&ge;70% direct)</option>
+        <option value="playoff">Playoff position (40&ndash;70%)</option>
+        <option value="mix">In the mix (15&ndash;40%)</option>
+        <option value="longshot">Long shot (&lt;15% advance)</option>
+      </select>
+      <label class="chip-toggle" id="f-flagged-wrap">
+        <input type="checkbox" id="f-flagged"> Flagged swings only
+      </label>
+      <span class="filter-count" id="resultCount"></span>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Move</th><th>Team</th><th>League</th><th>Pot</th>
+            <th class="num">Table</th><th class="num">Pts</th><th class="num">GD</th>
+            <th>Last result</th><th class="num">Coeff&nbsp;#</th><th class="num">Gap</th>
+            <th>Top-8%</th><th>Advance%</th>
+          </tr>
+        </thead>
+        <tbody id="powerBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-coeff">
+    <div class="section-head">
+      <h2>Power rank vs. UEFA coefficient rank</h2>
+      <p>Positive (blue) = the power index rates the club higher than its UEFA coefficient standing &mdash; performing above their historic seeding. Negative (red) = the coefficient still rates them higher than current form does. Sorted by the size of the gap.</p>
+    </div>
+    <div class="divchart">
+      <div class="divchart-scale"><span>&larr; coefficient rates them higher</span><span>power index rates them higher &rarr;</span></div>
+      <div id="divRows"></div>
+    </div>
+    <div class="legend-row">
+      <span><span class="legend-sw" style="background:var(--div-pos)"></span>Power index overrates vs. coefficient</span>
+      <span><span class="legend-sw" style="background:var(--div-neg)"></span>Coefficient still rates them higher</span>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-table">
+    <div class="section-head">
+      <h2>League phase standings</h2>
+      <p>Ranked by points, then goal difference, then goals scored (simplified tiebreak &mdash; UEFA's official rules apply further criteria for exact ties). Top 8 advance directly to the round of 16; 9th&ndash;24th go to the knockout play-offs; 25th&ndash;36th are eliminated.</p>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Team</th><th>League</th><th class="num">MP</th>
+            <th class="num">Pts</th><th class="num">GF</th><th class="num">GA</th><th class="num">GD</th><th>Form</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="method">
+    <h3>Methodology &amp; sources</h3>
+    <p><b>Composite power score</b> = 60% pre-season expert baseline + 40% UEFA club coefficient, then adjusted after every match by result margin and whether the outcome was an upset relative to the pre-matchday ranking. Movement shown is versus the pre-Matchday-1 baseline; swings of more than 5 places are flagged.</p>
+    <p><b>Expert baseline</b>: aggregated from publicly available pre-season Champions League power rankings (Goal.com, ESPN, CBS Sports, Bleacher Report, Sports Illustrated).</p>
+    <p><b>Live results &amp; standings</b>: pulled from a public soccer scoreboard feed on a rolling schedule. <b>UEFA coefficient</b>: official club coefficient values.</p>
+    <p><b>Knockout outlook</b> (Top-8%, Advance%) is a heuristic estimate from current rank and matchday performance, not a formal statistical projection.</p>
+  </div>
+</div>
+
+<div class="config-error" id="configError" hidden>
+  <h3 style="margin-bottom:10px;">Not configured yet</h3>
+  <p style="color:var(--ink-2); font-size:13.5px; line-height:1.6;">
+    This page needs its Supabase project URL and public anon key filled in at the top of the script
+    (look for <code>SUPABASE_URL</code> / <code>SUPABASE_ANON_KEY</code> near the bottom of this file).
+    See the project README for setup steps.
+  </p>
+</div>
+
+<script>
+// ======================================================================
+// Fill these in with your own Supabase project's values (Project Settings
+// > API). The anon/public key is safe to expose in client-side code — it
+// only grants what your Row Level Security policies allow, which the
+// bundled schema.sql restricts to read-only.
+// ======================================================================
+const SUPABASE_URL = "https://jmjbytdopynzpflxxpey.supabase.co/rest/v1/";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImptamJ5dGRvcHluenBmbHh4cGV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwNzEwMjcsImV4cCI6MjEwNDY0NzAyN30.bvoPvUmyPdvjAYz_Q6M-SgIGp1PyXiq5BOAGmyuC244";
+
+let TEAMS = [];
+let META = {};
+const state = { search:"", league:"all", pot:"all", outlook:"all", flaggedOnly:false };
+
+function fmtDate(iso){
+  if (!iso) return "—";
+  try{
+    const d = new Date(iso);
+    return d.toLocaleString(undefined,{month:"short", day:"numeric", hour:"numeric", minute:"2-digit", timeZoneName:"short"});
+  }catch(e){ return iso; }
+}
+
+function outlookBucket(t){
+  const a = t.advance_pct;
+  if (a >= 70) return "lock";
+  if (a >= 40) return "playoff";
+  if (a >= 15) return "mix";
+  return "longshot";
+}
+function zoneClass(tableRank){
+  if (tableRank <= 8) return "zone-top8";
+  if (tableRank <= 24) return "zone-playoff";
+  return "zone-out";
+}
+function mvIcon(dir){
+  if (dir === "up") return '<svg viewBox="0 0 10 10" fill="currentColor"><path d="M5 1l4 6H1z"/></svg>';
+  if (dir === "down") return '<svg viewBox="0 0 10 10" fill="currentColor"><path d="M5 9L1 3h8z"/></svg>';
+  return "";
+}
+
+function renderTiles(){
+  const el = document.getElementById("tiles");
+  if (!META || META.matchdays_played === undefined) { el.innerHTML = ""; return; }
+  const items = [
+    {label:"Matchdays played", value:`${META.matchdays_played}/${META.matchdays_total}`, sub:`${META.matches_played} of ${META.matches_total} matches final`},
+    {label:"Goals per match", value:(META.goals_per_match||0).toFixed(2), sub:`${META.total_goals||0} goals so far`},
+    {label:"Biggest mover", value:(META.biggest_mover_value>0?"+":"")+(META.biggest_mover_value||0), sub:`${META.biggest_mover_team||"—"} · now #${META.biggest_mover_rank||"—"}`},
+    {label:"Widest coefficient gap", value:(META.widest_gap_value>0?"+":"")+(META.widest_gap_value||0), sub:`${META.widest_gap_team||"—"}`},
+    {label:"Flagged swings", value:String(META.flagged_count||0), sub: META.flagged_count ? (META.flagged_teams||[]).join(", ") : "no move over 5 places"},
+  ];
+  el.innerHTML = items.map(it => `
+    <div class="tile">
+      <div class="tile-label">${it.label}</div>
+      <div class="tile-value num">${it.value}</div>
+      <div class="tile-sub">${it.sub}</div>
+    </div>`).join("");
+  document.getElementById("refreshedLabel").textContent = "updated " + fmtDate(META.last_refreshed);
+  const dot = document.getElementById("liveDot");
+  const staleMs = Date.now() - new Date(META.last_refreshed).getTime();
+  dot.classList.toggle("stale", !(staleMs >= 0 && staleMs < 30 * 60 * 1000));
+}
+
+function populateLeagueFilter(){
+  const sel = document.getElementById("f-league");
+  const current = sel.value;
+  const leagues = Array.from(new Set(TEAMS.map(t=>t.league))).sort();
+  sel.innerHTML = '<option value="all">All leagues</option>' + leagues.map(l=>`<option value="${l}">${l}</option>`).join("");
+  if (leagues.includes(current)) sel.value = current;
+}
+
+function applyFilters(list){
+  return list.filter(t=>{
+    if (state.search && !t.team.toLowerCase().includes(state.search.toLowerCase())) return false;
+    if (state.league!=="all" && t.league!==state.league) return false;
+    if (state.pot!=="all" && String(t.pot)!==state.pot) return false;
+    if (state.outlook!=="all" && outlookBucket(t)!==state.outlook) return false;
+    if (state.flaggedOnly && !t.flagged_swing) return false;
+    return true;
+  });
+}
+
+function renderPowerTable(){
+  const body = document.getElementById("powerBody");
+  const sorted = TEAMS.slice().sort((a,b)=>a.power_rank-b.power_rank);
+  const filtered = applyFilters(sorted);
+  document.getElementById("resultCount").textContent = `${filtered.length} of ${TEAMS.length} teams`;
+  if (!filtered.length){
+    body.innerHTML = `<tr><td colspan="13"><div class="empty-state">No teams match these filters.</div></td></tr>`;
+    return;
+  }
+  body.innerHTML = filtered.map(t=>{
+    const dir = t.movement>0?"up":(t.movement<0?"down":"flat");
+    const mv = t.movement===0 ? '&ndash;' : `${mvIcon(dir)}${Math.abs(t.movement)}`;
+    const gapClass = t.gap_vs_coeff>0?"gap-pos":(t.gap_vs_coeff<0?"gap-neg":"gap-zero");
+    const gapTxt = t.gap_vs_coeff>0?`+${t.gap_vs_coeff}`:t.gap_vs_coeff;
+    const flag = t.flagged_swing ? '<span class="flag-badge">FLAG</span>' : '';
+    return `<tr class="${zoneClass(t.table_rank)}">
+      <td class="rank-cell">${t.power_rank}</td>
+      <td><span class="mv ${dir}">${mv}</span>${flag}</td>
+      <td><div class="team-name">${t.team}</div><div class="team-sub">${t.country}</div></td>
+      <td>${t.league}</td>
+      <td>P${t.pot}</td>
+      <td class="num">${t.table_rank}</td>
+      <td class="num">${t.pts}</td>
+      <td class="num">${t.gd>0?"+":""}${t.gd}</td>
+      <td><span class="form-pill form-${t.form||"D"}">${t.form||"–"}</span>&nbsp;<span class="team-sub">${t.last_result||"—"}</span></td>
+      <td class="num">${t.coeff_rank}</td>
+      <td class="num gap-cell ${gapClass}">${gapTxt}</td>
+      <td><span class="probar-wrap"><span class="probar-track"><span class="probar-fill" style="width:${t.top8_pct}%"></span></span><span class="probar-num num">${t.top8_pct}%</span></span></td>
+      <td><span class="probar-wrap"><span class="probar-track"><span class="probar-fill" style="width:${t.advance_pct}%"></span></span><span class="probar-num num">${t.advance_pct}%</span></span></td>
+    </tr>`;
+  }).join("");
+}
+
+function renderCoeffChart(){
+  const el = document.getElementById("divRows");
+  const maxGap = Math.max(1, ...TEAMS.map(t=>Math.abs(t.gap_vs_coeff)));
+  const sorted = TEAMS.slice().sort((a,b)=>b.gap_vs_coeff-a.gap_vs_coeff);
+  el.innerHTML = sorted.map(t=>{
+    const pct = Math.abs(t.gap_vs_coeff)/maxGap*50;
+    const barHtml = t.gap_vs_coeff===0 ? "" :
+      (t.gap_vs_coeff>0
+        ? `<div class="divbar pos" style="width:${pct}%"></div>`
+        : `<div class="divbar neg" style="width:${pct}%"></div>`);
+    const valClass = t.gap_vs_coeff>0?"pos":(t.gap_vs_coeff<0?"neg":"zero");
+    const valTxt = t.gap_vs_coeff>0?`+${t.gap_vs_coeff}`:t.gap_vs_coeff;
+    return `<div class="divrow">
+      <div class="dname">${t.team}<small>Power #${t.power_rank} vs Coeff #${t.coeff_rank}</small></div>
+      <div class="divtrack">${barHtml}</div>
+      <div class="divval ${valClass} num">${valTxt}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderLeagueTable(){
+  const body = document.getElementById("tableBody");
+  const sorted = TEAMS.slice().sort((a,b)=>a.table_rank-b.table_rank);
+  body.innerHTML = sorted.map(t=>`
+    <tr class="${zoneClass(t.table_rank)}">
+      <td class="rank-cell">${t.table_rank}</td>
+      <td><div class="team-name">${t.team}</div><div class="team-sub">${t.country}</div></td>
+      <td>${t.league}</td>
+      <td class="num">${t.mp}</td>
+      <td class="num">${t.pts}</td>
+      <td class="num">${t.gf}</td>
+      <td class="num">${t.ga}</td>
+      <td class="num">${t.gd>0?"+":""}${t.gd}</td>
+      <td><span class="form-pill form-${t.form||"D"}">${t.form||"–"}</span></td>
+    </tr>`).join("");
+}
+
+function renderAll(){
+  renderTiles();
+  renderPowerTable();
+  renderCoeffChart();
+  renderLeagueTable();
+}
+
+function wireFilters(){
+  document.getElementById("f-search").addEventListener("input", e=>{ state.search=e.target.value; renderPowerTable(); });
+  document.getElementById("f-league").addEventListener("change", e=>{ state.league=e.target.value; renderPowerTable(); });
+  document.getElementById("f-pot").addEventListener("change", e=>{ state.pot=e.target.value; renderPowerTable(); });
+  document.getElementById("f-outlook").addEventListener("change", e=>{ state.outlook=e.target.value; renderPowerTable(); });
+  document.getElementById("f-flagged").addEventListener("change", e=>{
+    state.flaggedOnly = e.target.checked;
+    document.getElementById("f-flagged-wrap").classList.toggle("on", state.flaggedOnly);
+    renderPowerTable();
+  });
+  document.querySelectorAll(".tab-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("panel-"+btn.dataset.tab).classList.add("active");
+    });
+  });
+}
+
+async function boot(){
+  if (!SUPABASE_URL || SUPABASE_URL === "YOUR_SUPABASE_PROJECT_URL" || !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === "YOUR_SUPABASE_ANON_KEY"){
+    document.getElementById("configError").hidden = false;
+    return;
+  }
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const [{ data: teamsData, error: teamsErr }, { data: metaData, error: metaErr }] = await Promise.all([
+    sb.from("teams").select("*"),
+    sb.from("meta").select("*").eq("id", "summary").single(),
+  ]);
+  if (teamsErr) console.error("teams load error", teamsErr);
+  if (metaErr) console.error("meta load error", metaErr);
+
+  TEAMS = teamsData || [];
+  META = metaData || {};
+  document.getElementById("app").hidden = false;
+  wireFilters();
+  populateLeagueFilter();
+  renderAll();
+
+  // Realtime: push new rows to every open tab the instant the refresh job writes them.
+  sb.channel("public:teams")
+    .on("postgres_changes", { event: "*", schema: "public", table: "teams" }, payload => {
+      const row = payload.new;
+      if (!row) return;
+      const i = TEAMS.findIndex(t => t.slug === row.slug);
+      if (i >= 0) TEAMS[i] = row; else TEAMS.push(row);
+      populateLeagueFilter();
+      renderAll();
+    })
+    .subscribe();
+
+  sb.channel("public:meta")
+    .on("postgres_changes", { event: "*", schema: "public", table: "meta", filter: "id=eq.summary" }, payload => {
+      if (payload.new) { META = payload.new; renderTiles(); }
+    })
+    .subscribe();
+
+  // Belt-and-braces poll in case a Realtime connection drops silently.
+  setInterval(async () => {
+    const { data } = await sb.from("meta").select("*").eq("id", "summary").single();
+    if (data && data.last_refreshed !== META.last_refreshed){
+      META = data;
+      const { data: t2 } = await sb.from("teams").select("*");
+      if (t2) { TEAMS = t2; populateLeagueFilter(); }
+      renderAll();
+    } else if (data) {
+      META = data;
+      renderTiles();
+    }
+  }, 60000);
+}
+
+boot();
+</script>
+</body>
+</html>
