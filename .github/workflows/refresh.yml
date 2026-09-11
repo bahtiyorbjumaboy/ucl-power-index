@@ -5,7 +5,7 @@ on:
     # GitHub enforces a 5-minute floor on scheduled workflows — this runs
     # as close to that as GitHub allows. Use offset minutes to avoid the
     # busiest scheduler boundaries.
-    - cron: "2-59/5 * * * *"
+    - cron: "2/5 * * * *"
   workflow_dispatch: {}   # lets you trigger a run manually from the Actions tab
 
 permissions:
